@@ -29,4 +29,20 @@ npm start
 ```
 
 Le backend FastAPI (`uv run jarvis-server`) est lance automatiquement par l'app au demarrage,
-sur `http://127.0.0.1:8756`.
+sur `http://127.0.0.1:8756`. L'historique de conversation est sauvegarde dans
+`~/.jarvis/memory.db` (SQLite) et rechargee a chaque ouverture.
+
+### Installeur Windows (.exe)
+
+Pour obtenir une vraie appli installable (icone Bureau/menu Demarrer, plus besoin de terminal),
+lance la commande suivante **sur Windows** (electron-builder doit tourner sur l'OS cible) :
+
+```powershell
+cd desktop
+npm install
+npm run dist
+```
+
+L'installeur `Jarvis Setup <version>.exe` est genere dans `desktop/dist/`. Il installe l'app
+dans le profil utilisateur (pas besoin des droits admin) et cree les raccourcis. `uv` doit
+etre installe sur la machine (l'app l'utilise pour lancer le backend Python embarque).

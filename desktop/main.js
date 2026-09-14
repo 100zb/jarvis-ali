@@ -2,15 +2,23 @@ const { app, BrowserWindow } = require("electron");
 const { spawn } = require("child_process");
 const path = require("path");
 
-const PROJECT_ROOT = path.join(__dirname, "..");
+const DEV_PROJECT_ROOT = path.join(__dirname, "..");
+
+// En dev, le projet Python est le dossier parent de desktop/. Une fois packagee,
+// l'app embarque une copie du projet (src/, pyproject.toml, uv.lock) dans ses
+// resources : c'est depuis la que "uv run jarvis-server" doit tourner.
+function getBackendCwd() {
+  return app.isPackaged ? path.join(process.resourcesPath, "backend") : DEV_PROJECT_ROOT;
+}
 
 let mainWindow;
 let backendProcess;
 
 function startBackend() {
   backendProcess = spawn("uv", ["run", "jarvis-server"], {
-    cwd: PROJECT_ROOT,
+    cwd: getBackendCwd(),
     env: process.env,
+    windowsHide: true,
   });
 
   backendProcess.stdout.on("data", (data) => process.stdout.write(`[jarvis-server] ${data}`));
