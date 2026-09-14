@@ -130,6 +130,97 @@ class Conversation:
         self.compaction_count += 1
         return True
 
+    def send_stream(self, user_message: str):
+        """Comme send(), mais en generateur : yield des evenements au fur et a mesure.
+
+        Evenements possibles :
+        - {"type": "delta", "content": str}            -> fragment de texte de la reponse
+        - {"type": "tool_call", "name": str, "args": dict}
+        - {"type": "tool_result", "name": str, "result": str}
+        - {"type": "done", "content": str}              -> reponse finale complete
+        - {"type": "error", "message": str}
+        """
+        messages_before = len(self.messages)
+        self.messages.append({"role": "user", "content": user_message})
+
+        try:
+            for _ in range(self.MAX_TOOL_ITERATIONS):
+                tools = get_schemas()
+                stream = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=self.messages,
+                    temperature=self.temperature,
+                    tools=tools if tools else None,
+                    tool_choice="auto" if tools else None,
+                    stream=True,
+                )
+
+                content = ""
+                tool_calls_acc: dict[int, dict] = {}
+
+                for chunk in stream:
+                    delta = chunk.choices[0].delta
+
+                    if delta.content:
+                        content += delta.content
+                        yield {"type": "delta", "content": delta.content}
+
+                    if delta.tool_calls:
+                        for tc in delta.tool_calls:
+                            acc = tool_calls_acc.setdefault(tc.index, {"id": "", "name": "", "arguments": ""})
+                            if tc.id:
+                                acc["id"] = tc.id
+                            if tc.function and tc.function.name:
+                                acc["name"] += tc.function.name
+                            if tc.function and tc.function.arguments:
+                                acc["arguments"] += tc.function.arguments
+
+                if not tool_calls_acc:
+                    self.messages.append({"role": "assistant", "content": content})
+                    yield {"type": "done", "content": content}
+                    return
+
+                ordered_tool_calls = [tool_calls_acc[i] for i in sorted(tool_calls_acc)]
+
+                self.messages.append({
+                    "role": "assistant",
+                    "content": content or "",
+                    "tool_calls": [
+                        {
+                            "id": tc["id"],
+                            "type": "function",
+                            "function": {"name": tc["name"], "arguments": tc["arguments"]},
+                        } for tc in ordered_tool_calls
+                    ]
+                })
+
+                for tc in ordered_tool_calls:
+                    tool_name = tc["name"]
+                    raw_args = tc["arguments"] or "{}"
+
+                    try:
+                        args = json.loads(raw_args) or {}
+                    except json.JSONDecodeError:
+                        args = {}
+
+                    yield {"type": "tool_call", "name": tool_name, "args": args}
+
+                    result = execute_tool(tool_name, args)
+
+                    yield {"type": "tool_result", "name": tool_name, "result": result}
+
+                    self.messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc["id"],
+                        "content": result,
+                    })
+
+            yield {"type": "done", "content": "Trop d'iterations sur les outils, j'arrete la."}
+
+        except Exception:
+            self.messages = self.messages[:messages_before]
+            raise
+
     @property
     def turn_count(self) -> int:
         non_system = [m for m in self.messages[1:] if m.get('role') in ('user', 'assistant')]

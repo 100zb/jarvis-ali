@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "ddgs>=9.14.2",
+    "fastapi>=0.115.0",
     "folium>=0.20.0",
     "geopy>=2.4.1",
     "groq>=1.2.0",
@@ -14,6 +15,7 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "rich>=15.0.0",
     "tavily-python>=0.7.24",
+    "uvicorn[standard]>=0.32.0",
 ]
 [build-system]
 requires = ["hatchling"]
@@ -21,3 +23,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/jarvis"]
+
+[project.scripts]
+jarvis = "jarvis.main:main"
+jarvis-server = "jarvis.server:main"

@@ -13,3 +13,7 @@ __pycache__/
 # OS
 Thumbs.db
 .DS_Store
+
+# Desktop (Electron)
+desktop/node_modules/
+desktop/dist/
