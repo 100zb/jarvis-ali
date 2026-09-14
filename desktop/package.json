@@ -1,0 +1,42 @@
+{
+  "name": "jarvis-desktop",
+  "version": "0.1.0",
+  "description": "Interface desktop de Jarvis",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.0"
+  },
+  "build": {
+    "appId": "com.alikhaloui.jarvis",
+    "productName": "Jarvis",
+    "icon": "build/icon.png",
+    "publish": null,
+    "directories": { "output": "dist" },
+    "files": ["main.js", "renderer/**/*"],
+    "extraResources": [
+      {
+        "from": "..",
+        "to": "backend",
+        "filter": ["src/**/*", "pyproject.toml", "uv.lock", ".python-version", "README.md"]
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": { "category": "public.app-category.productivity" },
+    "linux": { "target": "AppImage", "category": "Utility" }
+  }
+}

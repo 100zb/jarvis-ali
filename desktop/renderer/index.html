@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' ws://127.0.0.1:* http://127.0.0.1:*" />
+  <title>Jarvis</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-drag"></div>
+
+      <div class="brand">
+        <div class="avatar">J</div>
+        <div class="brand-text">
+          <div class="brand-name">JARVIS</div>
+          <div class="brand-status">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-label">Connexion...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Statistiques</div>
+        <div class="stat-row"><span>Messages</span><span id="stat-messages">0</span></div>
+        <div class="stat-row"><span>Tours</span><span id="stat-turns">0</span></div>
+        <div class="stat-row"><span>Compactions</span><span id="stat-compactions">0</span></div>
+      </div>
+
+      <div class="sidebar-section sidebar-section-grow">
+        <div class="sidebar-label">Outils actifs</div>
+        <div class="tools-list" id="tools-list"></div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button id="reset-btn" class="ghost-btn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+          Nouvelle conversation
+        </button>
+      </div>
+    </aside>
+
+    <main class="chat">
+      <div class="chat-scroll" id="chat-scroll">
+        <div class="empty-state" id="empty-state">
+          <div class="empty-glyph">J</div>
+          <div class="empty-title">JARVIS</div>
+          <div class="empty-sub">Pret quand tu veux, BOSS.</div>
+        </div>
+        <div class="messages" id="messages"></div>
+      </div>
+
+      <div class="composer">
+        <form id="composer-form" class="composer-form">
+          <textarea id="composer-input" rows="1" placeholder="Message a Jarvis..." autofocus></textarea>
+          <button type="submit" id="send-btn" class="send-btn" aria-label="Envoyer" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+          </button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
