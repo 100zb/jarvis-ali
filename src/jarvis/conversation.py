@@ -12,13 +12,20 @@ class Conversation:
     KEEP_RECENT = 4
     MAX_TOOL_ITERATIONS = 5  # securite anti-boucle infinie
 
-    def __init__(self, client: Groq, system_prompt: str, model: str, temperature: float = 0.7):
+    def __init__(self, client: Groq, system_prompt: str, model: str, temperature: float = 0.7, store=None):
         self.client = client
         self.model = model
         self.temperature = temperature
         self.system_prompt = system_prompt
-        self.messages = [{"role": "system", "content": system_prompt}]
+        self.store = store
         self.compaction_count = 0
+
+        persisted = self.store.load_messages() if self.store else []
+        self.messages = [{"role": "system", "content": system_prompt}, *persisted]
+
+    def _persist(self) -> None:
+        if self.store:
+            self.store.replace_all(self.messages[1:])
 
     def send(self, user_message: str, console=None) -> str:
         """Envoie un message, gere les tool calls en boucle, retourne la reponse finale."""
@@ -40,6 +47,7 @@ class Conversation:
 
                 if not message.tool_calls:
                     self.messages.append({"role": "assistant", "content": message.content})
+                    self._persist()
                     return message.content
 
                 self.messages.append({
@@ -78,17 +86,19 @@ class Conversation:
                         "content": result,
                     })
 
+            self._persist()
             return "Trop d'iterations sur les outils, j'arrete la."
 
         except Exception:
             # Rollback : on retire tout ce qu'on a ajoute pendant cet appel rate
             self.messages = self.messages[:messages_before]
             raise
-        
+
     def reset(self):
         """Reset la conversation, garde juste le system prompt."""
         self.messages = [{"role": "system", "content": self.system_prompt}]
         self.compaction_count = 0
+        self._persist()
 
     def should_compact(self) -> bool:
         return len(self.messages) - 1 > self.COMPACT_THRESHOLD
@@ -128,6 +138,7 @@ class Conversation:
             *to_keep
         ]
         self.compaction_count += 1
+        self._persist()
         return True
 
     def send_stream(self, user_message: str):
@@ -177,6 +188,7 @@ class Conversation:
 
                 if not tool_calls_acc:
                     self.messages.append({"role": "assistant", "content": content})
+                    self._persist()
                     yield {"type": "done", "content": content}
                     return
 
@@ -215,6 +227,7 @@ class Conversation:
                         "content": result,
                     })
 
+            self._persist()
             yield {"type": "done", "content": "Trop d'iterations sur les outils, j'arrete la."}
 
         except Exception:

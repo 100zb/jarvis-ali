@@ -150,6 +150,37 @@
     }
   }
 
+  let historyLoaded = false;
+
+  async function loadHistory() {
+    if (historyLoaded) return;
+    historyLoaded = true;
+    try {
+      const res = await fetch(`${HTTP_BASE}/api/history`);
+      const data = await res.json();
+      const msgs = data.messages || [];
+      if (msgs.length === 0) return;
+
+      hideEmptyState();
+      msgs.forEach((m) => {
+        const row = document.createElement("div");
+        row.className = `msg msg-${m.role === "user" ? "user" : "assistant"}`;
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+        if (m.role === "user") {
+          bubble.textContent = m.content;
+        } else {
+          bubble.innerHTML = renderMarkdown(m.content);
+        }
+        row.appendChild(bubble);
+        messagesEl.appendChild(row);
+      });
+      scrollToBottom(false);
+    } catch (e) {
+      historyLoaded = false; // on reessaiera a la prochaine connexion
+    }
+  }
+
   async function loadStats() {
     try {
       const res = await fetch(`${HTTP_BASE}/api/stats`);
@@ -174,6 +205,7 @@
       setStreaming(false);
       loadTools();
       loadStats();
+      loadHistory();
     };
 
     ws.onclose = () => {

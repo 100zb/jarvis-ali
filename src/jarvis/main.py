@@ -3,9 +3,10 @@ from groq import Groq
 from rich.console import Console
 from rich.markdown import Markdown
 
-from jarvis.config import GROQ_API_KEY, MODEL, TEMPERATURE
+from jarvis.config import GROQ_API_KEY, MEMORY_DB_PATH, MODEL, TEMPERATURE
 from jarvis.conversation import Conversation
 from jarvis.personality import SYSTEM_PROMPT
+from jarvis.store import MemoryStore
 from jarvis.tools import registry  # noqa: F401 - declenche le chargement des outils
 import jarvis.tools  # noqa: F401 - charge tous les modules d'outils
 
@@ -14,12 +15,17 @@ console = Console()
 
 def main():
     client = Groq(api_key=GROQ_API_KEY)
-    conversation = Conversation(client, SYSTEM_PROMPT, MODEL, TEMPERATURE)
+    store = MemoryStore(MEMORY_DB_PATH)
+    conversation = Conversation(client, SYSTEM_PROMPT, MODEL, TEMPERATURE, store=store)
 
     available_tools = registry.list_tools()
     console.print("[bold cyan]Jarvis v0.2.0[/bold cyan] - Phase 2: tool calling actif")
     console.print(f"[dim]Outils charges ({len(available_tools)}): {', '.join(available_tools)}[/dim]")
-    console.print("[dim]Commandes: 'exit' | '/reset' | '/compact' | '/stats' | '/tools'[/dim]\n")
+    console.print("[dim]Commandes: 'exit' | '/reset' | '/compact' | '/stats' | '/tools'[/dim]")
+    if conversation.message_count > 0:
+        console.print(f"[dim]Memoire rechargee ({conversation.message_count} messages).[/dim]\n")
+    else:
+        console.print()
 
     while True:
         try:
