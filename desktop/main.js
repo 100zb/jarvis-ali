@@ -1,6 +1,7 @@
 const { app, BrowserWindow } = require("electron");
 const { spawn } = require("child_process");
 const path = require("path");
+const fs = require("fs");
 
 const DEV_PROJECT_ROOT = path.join(__dirname, "..");
 
@@ -14,16 +15,25 @@ function getBackendCwd() {
 let mainWindow;
 let backendProcess;
 
+// La fenetre du backend est cachee (windowsHide), donc c'est le seul endroit
+// ou une erreur au demarrage (ex: cle API manquante) reste consultable.
+function getBackendLogPath() {
+  return path.join(app.getPath("userData"), "backend.log");
+}
+
 function startBackend() {
+  const logStream = fs.createWriteStream(getBackendLogPath(), { flags: "a" });
+  logStream.write(`\n--- demarrage ${new Date().toISOString()} (cwd=${getBackendCwd()}) ---\n`);
+
   backendProcess = spawn("uv", ["run", "jarvis-server"], {
     cwd: getBackendCwd(),
     env: process.env,
     windowsHide: true,
   });
 
-  backendProcess.stdout.on("data", (data) => process.stdout.write(`[jarvis-server] ${data}`));
-  backendProcess.stderr.on("data", (data) => process.stderr.write(`[jarvis-server] ${data}`));
-  backendProcess.on("error", (err) => console.error("Impossible de lancer le backend Jarvis:", err));
+  backendProcess.stdout.on("data", (data) => { process.stdout.write(`[jarvis-server] ${data}`); logStream.write(data); });
+  backendProcess.stderr.on("data", (data) => { process.stderr.write(`[jarvis-server] ${data}`); logStream.write(data); });
+  backendProcess.on("error", (err) => { console.error("Impossible de lancer le backend Jarvis:", err); logStream.write(`ERREUR: ${err}\n`); });
 }
 
 function createWindow() {

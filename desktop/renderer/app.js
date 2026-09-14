@@ -195,12 +195,15 @@
 
   // ---------- websocket ----------
 
+  let reconnectAttempts = 0;
+
   function connect() {
     setStatus("", "Connexion...");
     ws = new WebSocket(WS_URL);
 
     ws.onopen = () => {
       connected = true;
+      reconnectAttempts = 0;
       setStatus("online", "En ligne");
       setStreaming(false);
       loadTools();
@@ -210,7 +213,10 @@
 
     ws.onclose = () => {
       connected = false;
-      setStatus("error", "Deconnecte");
+      reconnectAttempts += 1;
+      // Apres plusieurs echecs, le backend ne demarre probablement pas du tout
+      // (cle API manquante, uv absent...) plutot qu'un simple probleme reseau.
+      setStatus("error", reconnectAttempts >= 4 ? "Backend indisponible" : "Deconnecte");
       setStreaming(true); // bloque l'envoi tant qu'on n'est pas reconnecte
       setTimeout(connect, RECONNECT_DELAY_MS);
     };
