@@ -3,6 +3,11 @@ const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 
+// Sans productName au niveau racine du package.json, Electron nommerait le
+// dossier userData d'apres le champ "name" ("jarvis-desktop") plutot que
+// "Jarvis" -- on le fixe explicitement pour que le chemin soit previsible.
+app.setName("Jarvis");
+
 const DEV_PROJECT_ROOT = path.join(__dirname, "..");
 
 // En dev, le projet Python est le dossier parent de desktop/. Une fois packagee,
