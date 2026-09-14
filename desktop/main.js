@@ -28,11 +28,17 @@ function getBackendLogPath() {
 
 function startBackend() {
   const logStream = fs.createWriteStream(getBackendLogPath(), { flags: "a" });
-  logStream.write(`\n--- demarrage ${new Date().toISOString()} (cwd=${getBackendCwd()}) ---\n`);
+  const backendCwd = getBackendCwd();
+  // L'app peut etre installee dans un dossier protege (ex: Program Files),
+  // ou uv n'a pas le droit de creer son venv. On force l'environnement
+  // virtuel dans userData, qui est toujours accessible en ecriture pour
+  // l'utilisateur courant, quel que soit le dossier d'installation.
+  const venvDir = path.join(app.getPath("userData"), "venv");
+  logStream.write(`\n--- demarrage ${new Date().toISOString()} (cwd=${backendCwd}, venv=${venvDir}) ---\n`);
 
   backendProcess = spawn("uv", ["run", "jarvis-server"], {
-    cwd: getBackendCwd(),
-    env: process.env,
+    cwd: backendCwd,
+    env: { ...process.env, UV_PROJECT_ENVIRONMENT: venvDir },
     windowsHide: true,
   });
 
