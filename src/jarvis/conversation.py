@@ -20,8 +20,13 @@ class Conversation:
         self.messages = [{"role": "system", "content": system_prompt}]
         self.compaction_count = 0
 
-    def send(self, user_message: str, console=None) -> str:
-        """Envoie un message, gere les tool calls en boucle, retourne la reponse finale."""
+    def send(self, user_message: str, console=None, on_tool_call=None) -> str:
+        """Envoie un message, gere les tool calls en boucle, retourne la reponse finale.
+
+        on_tool_call: callback optionnel appele avec (tool_name, args_dict) avant
+        chaque execution d'outil, pour permettre a une UI externe (ex: GUI) de
+        l'afficher sans dependre de rich.Console.
+        """
         messages_before = len(self.messages)
         self.messages.append({"role": "user", "content": user_message})
 
@@ -69,6 +74,9 @@ class Conversation:
                     if console:
                         args_display = ", ".join(f"{k}={v!r}" for k, v in args.items())
                         console.print(f"[dim italic]>>> {tool_name}({args_display})[/dim italic]")
+
+                    if on_tool_call:
+                        on_tool_call(tool_name, args)
 
                     result = execute_tool(tool_name, args)
 
