@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jarvis</title>
+<meta name="description" content="Jarvis, assistant IA personnel en Python + Groq, conçu par Ali Khaloui.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%226%22 fill=%22%230B0B0A%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%227%22 fill=%22%23FF4D1A%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Éditorial magazine sombre : grille 12 col, typo serif géante comme élément graphique, 3D en fond */
+:root {
+  --nuit: #0B0B0A;
+  --papier: #EAE4D8;
+  --fumee: #8A857B;
+  --arc: #FF4D1A;
+  --ligne: #24231F;
+  --terminal: #121210;
+  --serif: "Instrument Serif", "Times New Roman", serif;
+  --sans: "Instrument Sans", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --gutter: clamp(16px, 2.8vw, 40px);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--nuit); color: var(--papier); font-family: var(--sans); font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+a { color: inherit; }
+::selection { background: var(--arc); color: var(--nuit); }
+:focus-visible { outline: 1px solid var(--arc); outline-offset: 4px; }
+
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.mono { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--fumee); }
+
+/* Barre haute */
+.bar { position: fixed; inset: 0 0 auto 0; z-index: 20; padding-top: env(safe-area-inset-top, 0px); background: var(--nuit); }
+.bar-inner { display: flex; align-items: center; gap: 32px; height: 56px; padding-inline: var(--gutter); border-bottom: 1px solid var(--ligne); position: relative; }
+.logo { font-family: var(--serif); font-size: 26px; text-decoration: none; line-height: 1; }
+.logo span, .dot { color: var(--arc); }
+.bar .meta { flex: 1; }
+.bar nav { display: flex; gap: 32px; font-size: 14px; font-weight: 500; }
+.bar nav a { text-decoration: none; color: var(--fumee); transition: color .2s; }
+.bar nav a:hover { color: var(--papier); }
+.bar nav a.install { color: var(--papier); }
+.bar nav a.hire { color: var(--arc); }
+.progress { position: absolute; left: 0; bottom: -1px; height: 2px; width: 100%; background: var(--arc); transform-origin: 0 50%; transform: scaleX(0); }
+
+/* Hero */
+.hero { position: relative; min-height: min(100svh, 960px); padding: 140px var(--gutter) 40px; display: grid; grid-template-columns: repeat(12, 1fr); grid-template-rows: auto 1fr auto auto; column-gap: 24px; overflow: hidden; }
+#gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 1.2s ease; }
+.hero > *:not(#gl) { position: relative; z-index: 1; }
+.hero .idx { grid-column: 1 / 7; }
+.hero .pitch { grid-column: 1 / 6; align-self: end; margin-bottom: 8px; }
+.pitch h2 { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: clamp(28px, 3vw, 40px); line-height: 1; margin: 0 0 16px; }
+.pitch p { color: var(--fumee); margin: 0; max-width: 38ch; }
+.hero h1 { grid-column: 1 / 13; font-family: var(--serif); font-weight: 400; font-size: clamp(120px, 21vw, 300px); line-height: .82; letter-spacing: -.04em; margin: 0 0 0 -.04em; }
+.hero .foot { grid-column: 1 / 13; display: flex; justify-content: space-between; gap: 16px; padding-top: 24px; }
+.hero .foot .coord { margin-left: auto; margin-right: 48px; }
+
+/* Sections communes */
+.sec { position: relative; padding: 80px var(--gutter) 120px; }
+.sec-head { display: flex; justify-content: space-between; border-top: 1px solid var(--ligne); padding-top: 24px; margin-bottom: 64px; }
+.display { font-family: var(--serif); font-weight: 400; letter-spacing: -.02em; line-height: .92; margin: 0; text-wrap: balance; }
+.display em { color: var(--arc); }
+
+/* Manifeste */
+.manifeste .display { font-size: clamp(52px, 7.2vw, 104px); max-width: 19ch; }
+.points { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 24px; margin-top: 72px; }
+.point { min-width: 0; }
+.point:nth-child(1) { grid-column: 6 / 9; }
+.point:nth-child(2) { grid-column: 10 / 13; }
+.point .mono { color: var(--arc); letter-spacing: 0; text-transform: none; font-size: 12px; }
+.point h3 { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 28px; margin: 8px 0 12px; }
+.point p { color: var(--fumee); margin: 0; }
+
+/* Capacités — disques */
+.capacites { overflow: hidden; --disc: clamp(240px, 39vw, 560px); }
+.cap-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 24px; align-items: center; min-height: calc(var(--disc) + 40px); }
+.cap-info { min-width: 0; }
+.cap-info .count { color: var(--arc); }
+.cap-info h2 { font-size: clamp(64px, 8.4vw, 120px); margin: 16px 0 28px; min-height: 1.84em; }
+.cap-info p { color: var(--fumee); max-width: 36ch; margin: 0 0 28px; min-height: 3.1em; }
+.cmd { display: inline-flex; gap: 12px; border: 1px solid var(--ligne); padding: 12px 16px; font-family: var(--mono); font-size: 13px; max-width: 100%; }
+.cmd b { color: var(--arc); font-weight: 400; }
+.swap { transition: opacity .35s, transform .35s; }
+.swap.out { opacity: 0; transform: translateY(8px); }
+.track { position: relative; height: var(--disc); touch-action: pan-y; cursor: grab; }
+.track:active { cursor: grabbing; }
+.disc { position: absolute; left: 0; top: 0; width: var(--disc); height: var(--disc); max-width: none; border-radius: 50%; transform-origin: 0 50%; transition: transform .7s cubic-bezier(.7,0,.2,1), opacity .5s; background: none; border: 0; padding: 0; cursor: pointer; }
+.vinyl { position: absolute; inset: 0; border-radius: 50%; background:
+  conic-gradient(from 20deg, transparent 0 8%, rgba(234,228,216,.10) 10%, transparent 14% 58%, rgba(234,228,216,.06) 61%, transparent 65%),
+  repeating-radial-gradient(circle, #141412 0 3px, #1a1917 3px 4px);
+  box-shadow: inset 0 0 0 2px var(--ligne); animation: spin 14s linear infinite; animation-play-state: paused; }
+.disc.on .vinyl { animation-play-state: running; }
+.label { position: absolute; left: 34%; top: 34%; width: 32%; height: 32%; border-radius: 50%; background: var(--papier); color: var(--nuit); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 22% 0 14%; transition: background .5s; }
+.disc.on .label { background: var(--arc); }
+.label .mono { color: var(--nuit); font-size: clamp(7px, .8vw, 11px); text-transform: none; letter-spacing: 0; }
+.label i { font-family: var(--serif); font-style: normal; font-size: clamp(22px, 3.4vw, 48px); line-height: 1; }
+.label::after { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px; border-radius: 50%; background: var(--nuit); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.cap-ctrl { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 56px; flex-wrap: wrap; }
+.arrows { display: flex; align-items: center; gap: 8px; }
+.arrows button { background: none; border: 1px solid var(--ligne); color: var(--papier); width: 44px; height: 44px; font: 18px var(--mono); cursor: pointer; transition: border-color .2s; }
+.arrows button:hover { border-color: var(--papier); }
+.arrows .mono { margin-left: 16px; }
+.ticks { display: flex; gap: 8px; }
+.ticks button { width: 32px; height: 12px; background: none; border: 0; padding: 5px 0; cursor: pointer; }
+.ticks button::before { content: ""; display: block; height: 2px; background: var(--ligne); transition: background .3s; }
+.ticks button[aria-current="true"]::before { background: var(--arc); }
+
+/* Sous le capot */
+.capot-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 40px; flex-wrap: wrap; }
+.capot-top .display { font-size: clamp(64px, 8.4vw, 120px); }
+.capot-top p { color: var(--fumee); max-width: 42ch; margin: 24px 0 0; }
+.flow { list-style: none; padding: 0; margin: 88px 0 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 32px; counter-reset: step; }
+.flow li { position: relative; border: 1px solid var(--ligne); padding: 20px; min-height: 200px; display: flex; flex-direction: column; justify-content: space-between; transition: border-color .3s; }
+.flow li:hover { border-color: var(--fumee); }
+.flow li.hot { border-color: var(--arc); }
+.flow li:not(:last-child)::after { content: "→"; position: absolute; right: -24px; top: 50%; transform: translateY(-50%); font-family: var(--mono); color: var(--fumee); }
+.flow .mono { letter-spacing: .04em; }
+.flow li.hot .n { color: var(--arc); }
+.flow strong { font-family: var(--serif); font-weight: 400; font-size: clamp(32px, 3vw, 44px); line-height: 1; margin-top: auto; margin-bottom: 12px; }
+.loop { height: 40px; margin: 4px 10% 0; border: 1px dashed var(--ligne); border-top: 0; }
+.capot-foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 16px; padding-inline: 10%; }
+.capot-foot .stack { color: var(--papier); }
+
+/* Installer */
+.install-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: start; }
+.install-grid .display { font-size: clamp(56px, 7.2vw, 104px); }
+.install-grid .req { display: block; margin: 40px 0 24px; }
+.term { background: var(--terminal); border: 1px solid var(--ligne); border-radius: 6px; font-family: var(--mono); font-size: 14px; min-width: 0; }
+.term-head { padding: 14px 20px; border-bottom: 1px solid var(--ligne); color: var(--fumee); font-size: 12px; }
+.term-row { display: grid; grid-template-columns: 24px 14px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--ligne); }
+.term-row .n { color: var(--fumee); font-size: 12px; }
+.term-row .p { color: var(--arc); }
+.term-row code { font: inherit; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+.copy { background: none; border: 1px solid transparent; color: var(--fumee); font: 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; padding: 6px 8px; cursor: pointer; transition: color .2s, border-color .2s; }
+.copy:hover { color: var(--papier); border-color: var(--ligne); }
+.copy.ok { color: var(--arc); }
+.term-out { padding: 16px 20px; color: var(--arc); }
+.alt { color: var(--fumee); max-width: 44ch; margin: 0 0 24px; }
+p code, .point code { font-family: var(--mono); font-size: .85em; color: var(--papier); }
+
+/* Le dev */
+.dev .intro { font-family: var(--serif); font-style: italic; font-size: 32px; color: var(--fumee); display: block; }
+.dev .name { font-size: clamp(72px, 10.5vw, 150px); margin-bottom: 56px; }
+.dev-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; align-items: start; }
+.dev-grid p { color: var(--fumee); max-width: 46ch; margin: 0 0 28px; font-size: 17px; }
+.dispo { display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--arc); border-radius: 999px; padding: 10px 16px; color: var(--papier); }
+.dispo::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--arc); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+.mail { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin: 12px 0 24px; }
+.mail span { font-family: var(--serif); font-style: italic; font-size: clamp(32px, 3.6vw, 52px); color: var(--arc); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 6px; overflow-wrap: anywhere; user-select: all; }
+.links { display: flex; gap: 32px; flex-wrap: wrap; }
+.links a { text-decoration: none; border-bottom: 1px solid var(--ligne); padding-bottom: 2px; transition: border-color .2s; }
+.links a:hover { border-color: var(--papier); }
+.footer { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 24px; margin-top: 120px; }
+.footer .rule { height: 1px; background: var(--ligne); }
+.footer .row { display: flex; justify-content: space-between; grid-column: 1 / -1; margin-top: -8px; }
+#mini { width: 100px; height: 100px; display: block; }
+.footer a.mono { text-decoration: none; }
+
+@media (max-width: 900px) {
+  .flow { grid-template-columns: 1fr; gap: 24px; }
+  .flow li { min-height: 0; flex-direction: row; align-items: baseline; gap: 16px; }
+  .flow li:not(:last-child)::after { content: "↓"; right: auto; left: 20px; top: auto; bottom: -22px; transform: none; }
+  .flow strong { margin: 0; font-size: 32px; }
+  .flow .desc { margin-left: auto; }
+  .loop { display: none; }
+  .capot-foot { padding: 0; }
+  .install-grid, .dev-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .points { grid-template-columns: 1fr; row-gap: 40px; }
+  .point:nth-child(n) { grid-column: 1; }
+  .capacites { --disc: 72vw; }
+  .cap-grid { grid-template-columns: 1fr; }
+  .arrows .mono { display: none; }
+}
+
+@media (max-width: 720px) {
+  .bar nav a:not(.install):not(.hire) { display: none; }
+  .bar .meta { display: none; }
+  .bar-inner { justify-content: space-between; }
+  .hero { padding-top: 104px; }
+  .hero .coord { display: none; }
+  .hero .idx, .hero .pitch { grid-column: 1 / 13; }
+  .hero .pitch { margin-top: 55vw; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-inner">
+    <a class="logo" href="#top">Jarvis<span>.</span></a>
+    <span class="mono meta">v0.1 — Python · Groq — 7 outils</span>
+    <nav aria-label="Navigation">
+      <a href="#capacites">Capacités</a>
+      <a href="#capot">Sous le capot</a>
+      <a class="install" href="#installer">Installer</a>
+      <a class="hire" href="#dev">Me recruter</a>
+    </nav>
+    <div class="progress" id="progress"></div>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero" aria-label="Jarvis">
+    <canvas id="gl" aria-hidden="true"></canvas>
+    <span class="mono idx">01 — Assistant personnel</span>
+    <div class="pitch">
+      <h2>une IA qui agit,<br>pas qui bavarde</h2>
+      <p>Assistant personnel en Python, branché sur Groq. Il cherche, affiche, lance. Tu parles, il exécute.</p>
+    </div>
+    <h1>Jarvis<span class="dot">.</span></h1>
+    <div class="foot">
+      <span class="mono">Conçu par Ali Khaloui</span>
+      <span class="mono coord">Orbe — 1 400 particules</span>
+      <span class="mono">Scroll ↓</span>
+    </div>
+  </section>
+
+  <section class="sec manifeste" aria-labelledby="man-t">
+    <div class="sec-head"><span class="mono">02 — Manifeste</span><span class="mono">p. 02</span></div>
+    <h2 class="display" id="man-t">Pas un chatbot de plus. Un assistant qui <em>passe à l’acte</em>.</h2>
+    <div class="points">
+      <div class="point"><span class="mono">(i)</span><h3>Il agit</h3><p>Une question devient une recherche web, une carte, un globe ou une app qui s’ouvre. Pas un paragraphe de plus.</p></div>
+      <div class="point"><span class="mono">(ii)</span><h3>Il s’étend</h3><p>Chaque capacité est une fonction Python marquée <code>@tool</code>. Jarvis lit sa signature et sa docstring, et le modèle sait s’en servir.</p></div>
+    </div>
+  </section>
+
+  <section class="sec capacites" id="capacites" aria-labelledby="cap-name">
+    <div class="sec-head"><span class="mono">03 — Capacités</span><span class="mono">p. 03</span></div>
+    <div class="cap-grid">
+      <div class="cap-info">
+        <span class="mono count swap" id="cap-count">01 / 07</span>
+        <h2 class="display swap" id="cap-name">Recherche web</h2>
+        <p class="swap" id="cap-desc"></p>
+        <div class="cmd swap" id="cap-cmd"><b>&gt;</b><span></span></div>
+      </div>
+      <div class="track" id="track" aria-roledescription="carrousel"></div>
+    </div>
+    <div class="cap-ctrl">
+      <div class="arrows">
+        <button id="prev" aria-label="Capacité précédente">←</button>
+        <button id="next" aria-label="Capacité suivante">→</button>
+        <span class="mono">Glisse ou utilise les flèches</span>
+      </div>
+      <div class="ticks" id="ticks"></div>
+    </div>
+  </section>
+
+  <section class="sec capot" id="capot" aria-labelledby="capot-t">
+    <div class="sec-head"><span class="mono">04 — Sous le capot</span><span class="mono">p. 04</span></div>
+    <div class="capot-top">
+      <h2 class="display" id="capot-t">Sous le <em>capot.</em></h2>
+      <p>Une boucle simple : tu demandes, le modèle choisit l’outil, Python l’exécute, tu vois le résultat.</p>
+    </div>
+    <ol class="flow">
+      <li><span class="mono n">01</span><strong>Toi</strong><span class="mono desc">Terminal ou app desktop</span></li>
+      <li><span class="mono n">02</span><strong>Jarvis</strong><span class="mono desc">Python + FastAPI local</span></li>
+      <li class="hot"><span class="mono n">03</span><strong>Groq</strong><span class="mono desc">LLM, choisit l’outil</span></li>
+      <li><span class="mono n">04</span><strong>Outils</strong><span class="mono desc">7 fonctions @tool</span></li>
+      <li><span class="mono n">05</span><strong>Résultat</strong><span class="mono desc">Réponse, carte, globe, app</span></li>
+    </ol>
+    <div class="loop" aria-hidden="true"></div>
+    <div class="capot-foot">
+      <span class="mono">La boucle recommence à chaque demande</span>
+      <span class="mono stack">Python 3.12 · Groq · FastAPI · Electron</span>
+    </div>
+  </section>
+
+  <section class="sec" id="installer" aria-labelledby="inst-t">
+    <div class="sec-head"><span class="mono">05 — Installer</span><span class="mono">p. 05</span></div>
+    <div class="install-grid">
+      <div>
+        <h2 class="display" id="inst-t">Chez toi en quatre <em>commandes.</em></h2>
+        <span class="mono req">Prérequis : Python 3.12+ · uv · une clé API Groq</span>
+        <p class="alt">Tu préfères une fenêtre ? L’app desktop Electron lance le même moteur : <code>cd desktop &amp;&amp; npm install &amp;&amp; npm start</code>. Un installeur Windows se génère avec <code>npm run dist</code>.</p>
+        <a href="https://github.com/100zb/jarvis-ali">Code source sur GitHub ↗</a>
+      </div>
+      <div class="term" role="group" aria-label="Commandes d’installation">
+        <div class="term-head">~/jarvis-ali — zsh</div>
+        <div class="term-row"><span class="n">01</span><span class="p" aria-hidden="true">$</span><code>git clone https://github.com/100zb/jarvis-ali</code><button class="copy" aria-label="Copier la commande 1">Copier</button></div>
+        <div class="term-row"><span class="n">02</span><span class="p" aria-hidden="true">$</span><code>cd jarvis-ali &amp;&amp; uv sync</code><button class="copy" aria-label="Copier la commande 2">Copier</button></div>
+        <div class="term-row"><span class="n">03</span><span class="p" aria-hidden="true">$</span><code>cp .env.example .env</code><button class="copy" aria-label="Copier la commande 3">Copier</button></div>
+        <div class="term-row"><span class="n">04</span><span class="p" aria-hidden="true">$</span><code>uv run jarvis</code><button class="copy" aria-label="Copier la commande 4">Copier</button></div>
+        <div class="term-out" id="term-out">● Mets ta GROQ_API_KEY dans .env, et Jarvis répond.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec dev" id="dev" aria-labelledby="dev-t">
+    <div class="sec-head"><span class="mono">06 — Le dev</span><span class="mono">p. 06</span></div>
+    <span class="intro">Conçu et codé par</span>
+    <h2 class="display name" id="dev-t">Ali Khaloui</h2>
+    <div class="dev-grid">
+      <div>
+        <p>Étudiant en BUT Informatique, parcours développement d’applications, à l’IUT de Marne-la-Vallée. Je cherche un stage de dev où je code vraiment, pas de la maintenance.</p>
+        <span class="mono dispo">Dispo en stage · fin avril → début juillet</span>
+      </div>
+      <div>
+        <span class="mono">Écris-moi</span>
+        <div class="mail"><span id="mail">ali.kha77500@gmail.com</span><button class="copy" aria-label="Copier l’adresse mail" data-copy="ali.kha77500@gmail.com">Copier</button></div>
+        <div class="links">
+          <a href="https://github.com/100zb">GitHub ↗</a>
+          <a href="https://100zb.github.io/portfolio/">Portfolio ↗</a>
+        </div>
+      </div>
+    </div>
+    <footer class="footer">
+      <div class="rule"></div>
+      <canvas id="mini" width="200" height="200" aria-hidden="true"></canvas>
+      <div class="rule"></div>
+      <div class="row"><span class="mono">Jarvis — 2026</span><a class="mono" href="#top">Retour en haut ↑</a></div>
+    </footer>
+  </section>
+</main>
+
+<script>
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// progression du scroll
+const bar = document.getElementById('progress');
+let maxScroll = 1;
+function measure() { maxScroll = Math.max(1, document.documentElement.scrollHeight - innerHeight); }
+function onScroll() { bar.style.transform = 'scaleX(' + Math.min(1, scrollY / maxScroll) + ')'; }
+addEventListener('scroll', onScroll, { passive: true });
+addEventListener('resize', () => { measure(); onScroll(); });
+addEventListener('load', () => { measure(); onScroll(); });
+onScroll();
+
+// orbe : Three.js chargé après le premier affichage
+function startOrb() {
+  if (!window.THREE) return;
+  const canvas = document.getElementById('gl');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+  camera.position.z = 6;
+
+  const N = 1400, pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+  const ga = Math.PI * (3 - Math.sqrt(5));
+  const cream = new THREE.Color('#EAE4D8'), orange = new THREE.Color('#FF4D1A');
+  for (let i = 0; i < N; i++) {
+    const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), t = ga * i;
+    pos.set([Math.cos(t) * r, y, Math.sin(t) * r], i * 3);
+    const c = Math.random() < 0.07 ? orange : cream;
+    col.set([c.r, c.g, c.b], i * 3);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+
+  const uniforms = { uTime: { value: 0 }, uMouse: { value: new THREE.Vector3(9, 9, 0) }, uPx: { value: renderer.getPixelRatio() } };
+  const mat = new THREE.ShaderMaterial({
+    uniforms, transparent: true, depthWrite: false, vertexColors: true,
+    vertexShader: `
+      uniform float uTime; uniform vec3 uMouse; uniform float uPx;
+      varying vec3 vCol; varying float vDepth;
+      void main() {
+        vec3 p = position;
+        float n = sin(p.x * 3.0 + uTime * .6) * cos(p.y * 4.0 - uTime * .4) * sin(p.z * 3.0 + uTime * .5);
+        p *= 1.0 + n * .07;
+        vec4 world = modelMatrix * vec4(p, 1.0);
+        vec3 d = world.xyz - uMouse;
+        float f = smoothstep(.9, 0.0, length(d.xy));
+        world.xyz += normalize(d) * f * .35;
+        vec4 mv = viewMatrix * world;
+        vDepth = clamp((world.z + 1.0) * .5, 0.0, 1.0);
+        vCol = color;
+        gl_PointSize = (2.0 + vDepth * 3.0) * uPx;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      varying vec3 vCol; varying float vDepth;
+      void main() {
+        float d = length(gl_PointCoord - .5);
+        if (d > .5) discard;
+        gl_FragColor = vec4(vCol, (.15 + vDepth * .85) * smoothstep(.5, .3, d));
+      }`
+  });
+  const orb = new THREE.Points(geo, mat);
+  scene.add(orb);
+
+  // champ ambiant
+  const M = 500, fpos = new Float32Array(M * 3);
+  for (let i = 0; i < M; i++) fpos.set([(Math.random() - .5) * 16, (Math.random() - .5) * 9, (Math.random() - .5) * 4 - 1], i * 3);
+  const fgeo = new THREE.BufferGeometry();
+  fgeo.setAttribute('position', new THREE.BufferAttribute(fpos, 3));
+  const field = new THREE.Points(fgeo, new THREE.PointsMaterial({ color: '#8A857B', size: 0.018, transparent: true, opacity: .6 }));
+  scene.add(field);
+
+  const mouse = new THREE.Vector2(9, 9), target = new THREE.Vector3(9, 9, 0);
+  function resize() {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+    const mobile = w < 720;
+    orb.scale.setScalar(mobile ? 1.05 : 1.45);
+    orb.position.set(mobile ? 0 : 1.7, mobile ? .9 : .15, 0);
+  }
+  addEventListener('resize', resize); resize();
+
+  canvas.parentElement.addEventListener('pointermove', e => {
+    const r = canvas.getBoundingClientRect();
+    mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    const v = new THREE.Vector3(mouse.x, mouse.y, .5).unproject(camera).sub(camera.position).normalize();
+    target.copy(camera.position).add(v.multiplyScalar(-camera.position.z / v.z));
+  });
+  canvas.parentElement.addEventListener('pointerleave', () => target.set(9, 9, 0));
+
+  const clock = new THREE.Clock();
+  const speed = reduce ? .3 : 1;
+  function frame() {
+    const t = clock.getElapsedTime() * speed;
+    uniforms.uTime.value = t;
+    uniforms.uMouse.value.lerp(target, .08);
+    orb.rotation.y = t * .08 + mouse.x * .15;
+    orb.rotation.x = .45 + mouse.y * .1;
+    field.rotation.y = t * .01;
+    renderer.render(scene, camera);
+  }
+  canvas.style.opacity = 1;
+  let last = 0;
+  (function loop(now) {
+    requestAnimationFrame(loop);
+    if (document.hidden || scrollY > innerHeight * 1.2 || now - last < 33) return;
+    last = now; frame();
+  })(0);
+}
+// sur téléphone : version canvas 2D, bien plus légère que WebGL
+function startOrb2D() {
+  const c = document.getElementById('gl'), x = c.getContext('2d');
+  const N = 700, ga = Math.PI * (3 - Math.sqrt(5)), pts = [];
+  for (let i = 0; i < N; i++) { const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y); pts.push([Math.cos(ga * i) * r, y, Math.sin(ga * i) * r, Math.random() < .07]); }
+  let w, h, dpr;
+  function size() { dpr = Math.min(devicePixelRatio, 2); w = c.clientWidth; h = c.clientHeight; c.width = w * dpr; c.height = h * dpr; x.setTransform(dpr, 0, 0, dpr, 0, 0); }
+  addEventListener('resize', size); size();
+  c.style.opacity = 1;
+  let last = 0;
+  (function loop(t) {
+    requestAnimationFrame(loop);
+    if (document.hidden || scrollY > innerHeight * 1.2 || t - last < 33) return;
+    last = t;
+    const a = t * .00008 * (reduce ? .3 : 1), tilt = .45, R = w * .36, cx = w / 2, cy = h * .36;
+    x.clearRect(0, 0, w, h);
+    for (const [px, py, pz, hot] of pts) {
+      const n = 1 + Math.sin(px * 3 + t * .0006) * Math.cos(py * 4 - t * .0004) * .06;
+      const X = (px * Math.cos(a) - pz * Math.sin(a)) * n, Z0 = (px * Math.sin(a) + pz * Math.cos(a)) * n;
+      const Y = py * n * Math.cos(tilt) - Z0 * Math.sin(tilt), Z = py * n * Math.sin(tilt) + Z0 * Math.cos(tilt);
+      const d = (Z + 1) / 2;
+      x.fillStyle = hot ? 'rgba(255,77,26,' + (.3 + d * .7) + ')' : 'rgba(234,228,216,' + (.1 + d * .85) + ')';
+      x.fillRect(cx + X * R, cy + Y * R, .8 + d * 1.6, .8 + d * 1.6);
+    }
+  })(0);
+}
+addEventListener('load', () => {
+  if (innerWidth < 720) { startOrb2D(); return; }
+  const go = () => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    sc.onload = startOrb;
+    document.body.appendChild(sc);
+  };
+  'requestIdleCallback' in window ? requestIdleCallback(go, { timeout: 1200 }) : setTimeout(go, 300);
+});
+
+// carrousel de disques
+const tools = [
+  { name: 'Recherche web', short: 'web_search', desc: 'Actu, sport, infos récentes : Jarvis cherche sur le web et résume les meilleurs résultats.', cmd: '« Qui a gagné le match du PSG hier ? »' },
+  { name: 'Carte', short: 'show_map', desc: 'Une carte 2D interactive au thème sombre de Jarvis, zoomée sur le lieu demandé.', cmd: '« Montre-moi Chelles sur une carte »' },
+  { name: 'Globe', short: 'show_globe', desc: 'Un globe 3D façon Iron Man qui s’oriente tout seul vers les lieux, avec des markers à survoler.', cmd: '« Affiche Tokyo, Paris et New York sur le globe »' },
+  { name: 'Lancer une app', short: 'open_app', desc: 'Spotify, Discord, Steam, VS Code, Chrome… Jarvis ouvre l’app par son nom, même en langage naturel.', cmd: '« Mets de la musique »' },
+  { name: 'Apps connues', short: 'list_known_apps', desc: 'La liste des applications que Jarvis sait lancer sur ton PC Windows.', cmd: '« Tu peux ouvrir quoi ? »' },
+  { name: 'Calcul', short: 'calculate', desc: 'Des calculs exacts et sécurisés, puissances comprises, au lieu d’une approximation du modèle.', cmd: '« Combien font 2 puissance 32 ? »' },
+  { name: 'Heure', short: 'get_current_time', desc: 'La date et l’heure exactes de ta machine, pour ne jamais inventer.', cmd: '« Il est quelle heure ? »' }
+];
+(function () {
+  const track = document.getElementById('track'), ticks = document.getElementById('ticks');
+  const $ = id => document.getElementById(id);
+  const discs = tools.map((t, i) => {
+    const b = document.createElement('button');
+    b.className = 'disc';
+        b.innerHTML = '<span class="vinyl"></span><span class="label"><span class="mono">' + t.short + '</span> <i>' + String(i + 1).padStart(2, '0') + '</i></span><span class="sr">, ' + t.name + '</span>';
+    b.addEventListener('click', () => go(i));
+    track.appendChild(b);
+    const k = document.createElement('button');
+    k.setAttribute('aria-label', 'Aller à ' + t.name);
+    k.addEventListener('click', () => go(i));
+    ticks.appendChild(k);
+    return b;
+  });
+  const layout = [ [0, 1], [.86, .6], [1.36, .44], [1.72, .34], [2, .26], [2.2, .2], [2.35, .16] ];
+  let cur = 0;
+  function place() {
+    discs.forEach((d, i) => {
+      const k = i - cur;
+      let x, s, o = 1;
+      if (k < 0) { x = -.7; s = .8; o = 0; }
+      else { [x, s] = layout[Math.min(k, 6)]; }
+      d.style.transform = 'translateX(calc(var(--disc) * ' + x + ')) scale(' + s + ')';
+      d.style.opacity = o;
+      d.style.zIndex = 10 - Math.abs(k);
+      d.classList.toggle('on', k === 0);
+      d.tabIndex = k === 0 ? 0 : -1;
+      ticks.children[i].setAttribute('aria-current', k === 0);
+    });
+  }
+  function text() {
+    const t = tools[cur];
+    $('cap-count').textContent = String(cur + 1).padStart(2, '0') + ' / ' + String(tools.length).padStart(2, '0');
+    $('cap-name').textContent = t.name;
+    $('cap-desc').textContent = t.desc;
+    $('cap-cmd').lastChild.textContent = t.cmd;
+  }
+  const swaps = document.querySelectorAll('.cap-info .swap');
+  function go(i) {
+    i = (i + tools.length) % tools.length;
+    if (i === cur) return;
+    cur = i; place();
+    if (reduce) { text(); return; }
+    swaps.forEach(s => s.classList.add('out'));
+    setTimeout(() => { text(); swaps.forEach(s => s.classList.remove('out')); }, 300);
+  }
+  $('prev').addEventListener('click', () => go(cur - 1));
+  $('next').addEventListener('click', () => go(cur + 1));
+  document.getElementById('capacites').addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') go(cur + 1);
+    if (e.key === 'ArrowLeft') go(cur - 1);
+  });
+  let x0 = null;
+  track.addEventListener('pointerdown', e => { x0 = e.clientX; });
+  addEventListener('pointerup', e => {
+    if (x0 === null) return;
+    const dx = e.clientX - x0; x0 = null;
+    if (Math.abs(dx) > 40) go(cur + (dx < 0 ? 1 : -1));
+  });
+  place(); text();
+})();
+
+// copier
+document.querySelectorAll('.copy').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const txt = btn.dataset.copy || btn.previousElementSibling.textContent;
+    const done = () => { btn.textContent = 'Copié'; btn.classList.add('ok'); setTimeout(() => { btn.textContent = 'Copier'; btn.classList.remove('ok'); }, 1500); };
+    const pick = () => { const r = document.createRange(); r.selectNodeContents(btn.previousElementSibling); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
+    if (navigator.clipboard) navigator.clipboard.writeText(txt).then(done, pick); else pick();
+  });
+});
+
+// mini orbe du footer
+(function () {
+  const c = document.getElementById('mini'), x = c.getContext('2d');
+  const N = 260, ga = Math.PI * (3 - Math.sqrt(5)), pts = [];
+  for (let i = 0; i < N; i++) { const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y); pts.push([Math.cos(ga * i) * r, y, Math.sin(ga * i) * r]); }
+  function draw(t) {
+    x.clearRect(0, 0, 200, 200);
+    const a = t * .0004;
+    for (const [px, py, pz] of pts) {
+      const X = px * Math.cos(a) - pz * Math.sin(a), Z = px * Math.sin(a) + pz * Math.cos(a);
+      const d = (Z + 1) / 2;
+      x.fillStyle = 'rgba(234,228,216,' + (.1 + d * .8) + ')';
+      x.beginPath(); x.arc(100 + X * 86, 100 + py * 86, .8 + d * 1.6, 0, 7); x.fill();
+    }
+    x.fillStyle = '#FF4D1A'; x.beginPath(); x.arc(100, 100, 9, 0, 7); x.fill();
+  }
+  let on = false, last = 0;
+  new IntersectionObserver(([e]) => { on = e.isIntersecting; }, { rootMargin: '100px' }).observe(c);
+  draw(0);
+  (function loop(t) { requestAnimationFrame(loop); if (!on || document.hidden || t - last < 33) return; last = t; draw(reduce ? t * .3 : t); })(0);
+})();
+</script>
+
+</body>
+</html>
